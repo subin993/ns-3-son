@@ -1803,7 +1803,8 @@ LteEnbRrc::GetTypeId (void)
     // SRS related attributes
     .AddAttribute ("SrsPeriodicity",
                    "The SRS periodicity in milliseconds",
-                   UintegerValue (40),
+                  //  UintegerValue (40),
+                   UintegerValue (80),
                    MakeUintegerAccessor (&LteEnbRrc::SetSrsPeriodicity, 
                                          &LteEnbRrc::GetSrsPeriodicity),
                    MakeUintegerChecker<uint32_t> ())
@@ -2605,7 +2606,7 @@ LteEnbRrc::DoRecvHandoverRequest (EpcX2SapUser::HandoverRequestParams req)
     {
       NS_LOG_INFO (this << " failed to allocate a preamble for non-contention based RA => cannot accept HO");
       RemoveUe (rnti);
-      NS_FATAL_ERROR ("should trigger HO Preparation Failure, but it is not implemented");
+      // NS_FATAL_ERROR ("should trigger HO Preparation Failure, but it is not implemented");
       return;
     }
 

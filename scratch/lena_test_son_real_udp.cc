@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2012-2018 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2013 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,15 +27,10 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/config-store-module.h"
 #include "ns3/son_server.h"
-// #include "ns3/netanim-module.h"
-#include <iostream>
-#include <vector>
-#include <stdio.h>
-#include <iomanip>
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("LenaX2HandoverExample");
+NS_LOG_COMPONENT_DEFINE ("LenaX2HandoverMeasures");
 
 void
 NotifyConnectionEstablishedUe (std::string context,
@@ -43,7 +38,7 @@ NotifyConnectionEstablishedUe (std::string context,
                                uint16_t cellid,
                                uint16_t rnti)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " UE IMSI " << imsi
             << ": connected to CellId " << cellid
             << " with RNTI " << rnti
@@ -57,7 +52,7 @@ NotifyHandoverStartUe (std::string context,
                        uint16_t rnti,
                        uint16_t targetCellId)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " UE IMSI " << imsi
             << ": previously connected to CellId " << cellid
             << " with RNTI " << rnti
@@ -71,7 +66,7 @@ NotifyHandoverEndOkUe (std::string context,
                        uint16_t cellid,
                        uint16_t rnti)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " UE IMSI " << imsi
             << ": successful handover to CellId " << cellid
             << " with RNTI " << rnti
@@ -84,7 +79,7 @@ NotifyConnectionEstablishedEnb (std::string context,
                                 uint16_t cellid,
                                 uint16_t rnti)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " eNB CellId " << cellid
             << ": successful connection of UE with IMSI " << imsi
             << " RNTI " << rnti
@@ -98,7 +93,7 @@ NotifyHandoverStartEnb (std::string context,
                         uint16_t rnti,
                         uint16_t targetCellId)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " eNB CellId " << cellid
             << ": start handover of UE with IMSI " << imsi
             << " RNTI " << rnti
@@ -112,7 +107,7 @@ NotifyHandoverEndOkEnb (std::string context,
                         uint16_t cellid,
                         uint16_t rnti)
 {
-  std::cout << Simulator::Now ().GetSeconds () << " " << context
+  std::cout << context
             << " eNB CellId " << cellid
             << ": completed handover of UE with IMSI " << imsi
             << " RNTI " << rnti
@@ -121,17 +116,18 @@ NotifyHandoverEndOkEnb (std::string context,
 
 
 /**
- * Sample simulation script for a X2-based handover.
- * It instantiates two eNodeB, attaches one UE to the 'source' eNB and
- * triggers a handover of the UE towards the 'target' eNB.
+ * Sample simulation script for an automatic X2-based handover based on the RSRQ measures.
+ * It instantiates two eNodeB, attaches one UE to the 'source' eNB.
+ * The UE moves between both eNBs, it reports measures to the serving eNB and
+ * the 'source' (serving) eNB triggers the handover of the UE towards
+ * the 'target' eNB when it considers it is a better eNB.
  */
 int
 main (int argc, char *argv[])
 {
-  // LogLevel logLevel = (LogLevel)(LOG_PREFIX_FUNC | LOG_PREFIX_TIME | LOG_LEVEL_ALL);
+  // LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_ALL);
 
-  // LogComponentEnable("PfFfMacScheduler", logLevel);
-  // LogComponentEnable("A3RsrpHandoverAlgorithm", logLevel);
+  // LogComponentEnable ("MacStatsCalculator", logLevel);
   // LogComponentEnable ("LteHelper", logLevel);
   // LogComponentEnable ("EpcHelper", logLevel);
   // LogComponentEnable ("EpcEnbApplication", logLevel);
@@ -140,22 +136,28 @@ main (int argc, char *argv[])
   // LogComponentEnable ("EpcSgwApplication", logLevel);
   // LogComponentEnable ("EpcX2", logLevel);
 
+  // LogComponentEnable ("RrFfMacScheduler", logLevel);
   // LogComponentEnable ("LteEnbRrc", logLevel);
   // LogComponentEnable ("LteEnbNetDevice", logLevel);
   // LogComponentEnable ("LteUeRrc", logLevel);
   // LogComponentEnable ("LteUeNetDevice", logLevel);
+  // LogComponentEnable ("A2A4RsrqHandoverAlgorithm", logLevel);
+  // LogComponentEnable ("A3RsrpHandoverAlgorithm", logLevel);
 
-  uint16_t numberOfUes = 3;
+  uint16_t numberOfUes = 24;
   uint16_t numberOfEnbs = 3;
-  uint16_t numBearersPerUe = 2;
-  bool disableDl = false;
-  bool disableUl = false;
-
+  uint16_t numBearersPerUe = 1;
+  // bool disableDl = false;
+  // bool disableUl = false;
   double distance = 250.0; // m
-  double yForUe = 500.0;   // m
+  // double yForUe = 500.0;   // m
   double speed = 20;       // m/s
-  double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 100 + (double)(numberOfEnbs + 1) * distance / speed;
   double enbTxPowerDbm = 46.0;
+  // double CalTime = 3; 
+
+  // <Cell Id, RNTI> Container for PRB Usage
+  // map <uint16_t,uint16_t> RntiContainer;
 
   //opengym environment
   uint32_t openGymPort = 5555;
@@ -169,24 +171,31 @@ main (int argc, char *argv[])
 
   // Command line arguments
   CommandLine cmd;
-  cmd.AddValue ("numberOfUes", "Number of UEs", numberOfUes);
-  cmd.AddValue ("numberOfEnbs", "Number of eNodeBs", numberOfEnbs);
-  cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
-  cmd.AddValue ("disableDl", "Disable downlink data flows", disableDl);
-  cmd.AddValue ("disableUl", "Disable uplink data flows", disableUl);
+  cmd.AddValue ("simTime", "Total duration of the simulation (in seconds)", simTime);
+  cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
+  cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 46.0)", enbTxPowerDbm);
+
   cmd.Parse (argc, argv);
 
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
-  //lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
+  // lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
   lteHelper->SetSchedulerType ("ns3::PfFfMacScheduler");
-  //lteHelper->SetHandoverAlgorithmType ("ns3::NoOpHandoverAlgorithm"); // disable automatic handover
-  lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm"); // disable automatic handover
-  // lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger", TimeValue (MilliSeconds(0)));
-  // lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis", DoubleValue (0));
-  
+
+  // lteHelper->SetHandoverAlgorithmType ("ns3::A2A4RsrqHandoverAlgorithm");
+  // lteHelper->SetHandoverAlgorithmAttribute ("ServingCellThreshold",
+  //                                           UintegerValue (30));
+  // lteHelper->SetHandoverAlgorithmAttribute ("NeighbourCellOffset",
+  //                                           UintegerValue (1));
+
+   lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
+   lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
+                                             DoubleValue (0.0));
+   lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
+                                             TimeValue (MilliSeconds (0)));
+
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
   // Create a single RemoteHost
@@ -214,15 +223,32 @@ main (int argc, char *argv[])
   // interface 0 is localhost, 1 is the p2p device
   remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
+  /*
+   * Network topology:
+   *
+   *      |     + --------------------------------------------------------->
+   *      |     UE
+   *      |
+   *      |               d                   d                   d
+   *    y |     |-------------------x-------------------x-------------------
+   *      |     |                 eNodeB              eNodeB
+   *      |   d |
+   *      |     |
+   *      |     |                                             d = distance
+   *            o (0, 0, 0)                                   y = yForUe
+   */
+
   NodeContainer ueNodes;
   NodeContainer enbNodes;
   enbNodes.Create (numberOfEnbs);
   ueNodes.Create (numberOfUes);
+
+
   // Install Mobility Model in eNB
   Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
   for (uint16_t i = 0; i < numberOfEnbs; i++)
     {
-      Vector enbPosition (distance * (i + 1), distance, 0);
+      Vector enbPosition (distance, i*distance, 0);
       enbPositionAlloc->Add (enbPosition);
     }
   MobilityHelper enbMobility;
@@ -230,34 +256,32 @@ main (int argc, char *argv[])
   enbMobility.SetPositionAllocator (enbPositionAlloc);
   enbMobility.Install (enbNodes);
 
-  // // Install Mobility Model
-  // Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
-  // positionAlloc->Add (Vector (0, 0, 0));
-  // positionAlloc->Add (Vector (100, 0, 0));
-  // positionAlloc->Add (Vector (100, 100, 0));
-  // positionAlloc->Add (Vector (0, 100, 0));
-  // positionAlloc->Add (Vector (100/2, 100/2, 0));
-  // MobilityHelper mobility;
-  // mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  // mobility.SetPositionAllocator (positionAlloc);
-  // mobility.Install (enbNodes);
-  // mobility.Install (ueNodes);
-
   // Install Mobility Model in UE
   MobilityHelper ueMobility;
   ueMobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
   ueMobility.Install (ueNodes);
-  ueNodes.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  ueNodes.Get (1)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  ueNodes.Get (2)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  ueNodes.Get (0)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  ueNodes.Get (1)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed-5, 0, 0));
-  ueNodes.Get (2)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed/2, 0, 0));
+  for (uint16_t i = 0; i < 8; i++)
+    {
+      ueNodes.Get(i)->GetObject<MobilityModel> ()->SetPosition (Vector (distance, 0, 0));
+      ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
+    }
+  for (uint16_t i = 8; i < 16; i++)
+    {
+      ueNodes.Get(i)->GetObject<MobilityModel> ()->SetPosition (Vector (distance, (distance*4/7)+((i-2)*(distance/30)), 0));
+      ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 10, 0));
+    }
+  for (uint16_t i = 16; i < numberOfUes; i++)
+    {
+      ueNodes.Get(i)->GetObject<MobilityModel> ()->SetPosition (Vector (distance, 2*distance - (i*(distance/50)), 0));
+      ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
+    }
 
   Ptr<SonServerGymEnv> son_server = CreateObject<SonServerGymEnv> ();
   Ptr<OpenGymInterface> openGymInterface = CreateObject<OpenGymInterface> (openGymPort);
 
   son_server->SetOpenGymInterface(openGymInterface);
+  //New Part
+  //son_server->SetAttribute ("ueNum",UintegerValue(numberOfUes));
 
   // Install LTE Devices in eNB and UEs
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
@@ -272,22 +296,38 @@ main (int argc, char *argv[])
   // Attach all UEs to the first eNodeB
   for (uint16_t i = 0; i < numberOfUes; i++)
     {
-      lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      // lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      lteHelper->AttachToClosestEnb (ueLteDevs.Get (i), enbLteDevs);
+      // lteHelper->Attach (ueLteDevs.Get (i));
     }
 
 
   NS_LOG_LOGIC ("setting up applications");
 
-  // Install and start applications on UEs and remote host
+  NS_LOG_INFO ("Install and start applications on UEs and remote host");
   uint16_t dlPort = 10000;
   uint16_t ulPort = 20000;
+
+  DataRateValue dataRateValue = DataRate ("18.6Mbps");
+
+  uint64_t bitRate = dataRateValue.Get ().GetBitRate ();
+
+  uint32_t packetSize = 1024; //bytes
+
+  NS_LOG_DEBUG ("bit rate " << bitRate);
+
+  double interPacketInterval = static_cast<double> (packetSize * 8) / bitRate;
+
+  Time udpInterval = Seconds (interPacketInterval);
+
+  NS_LOG_DEBUG ("UDP will use application interval " << udpInterval.GetSeconds () << " sec");
 
   // randomize a bit start times to avoid simulation artifacts
   // (e.g., buffer overflows due to packet transmissions happening
   // exactly at the same time)
   Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
-  startTimeSeconds->SetAttribute ("Min", DoubleValue (0.05));
-  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.06));
+  startTimeSeconds->SetAttribute ("Min", DoubleValue (0));
+  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.010));
 
   for (uint32_t u = 0; u < numberOfUes; ++u)
     {
@@ -298,51 +338,50 @@ main (int argc, char *argv[])
 
       for (uint32_t b = 0; b < numBearersPerUe; ++b)
         {
-          ApplicationContainer clientApps;
-          ApplicationContainer serverApps;
+          ApplicationContainer ulClientApps;
+          ApplicationContainer ulServerApps;
+          ApplicationContainer dlClientApps;
+          ApplicationContainer dlServerApps;
+
+          ++dlPort;
+          ++ulPort;
+
+          NS_LOG_LOGIC ("installing UDP DL app for UE " << u + 1);
+          UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
+          dlClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+          dlClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+          dlClientHelper.SetAttribute ("MaxPackets", UintegerValue (1));
+          dlClientApps.Add (dlClientHelper.Install (remoteHost));
+
+          PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
+          dlServerApps.Add (dlPacketSinkHelper.Install (ue));
+
+          NS_LOG_LOGIC ("installing UDP UL app for UE " << u + 1);
+          UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
+          ulClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+          ulClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+          ulClientHelper.SetAttribute ("MaxPackets", UintegerValue (1));
+          ulClientApps.Add (ulClientHelper.Install (ue));
+
+          PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
+          ulServerApps.Add (ulPacketSinkHelper.Install (remoteHost));
+
           Ptr<EpcTft> tft = Create<EpcTft> ();
-
-          if (!disableDl)
-            {
-              ++dlPort;
-
-              NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
-              UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
-              clientApps.Add (dlClientHelper.Install (remoteHost));
-              PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
-                                                   InetSocketAddress (Ipv4Address::GetAny (), dlPort));
-              serverApps.Add (dlPacketSinkHelper.Install (ue));
-
-              EpcTft::PacketFilter dlpf;
-              dlpf.localPortStart = dlPort;
-              dlpf.localPortEnd = dlPort;
-              tft->Add (dlpf);
-            }
-
-          if (!disableUl)
-            {
-              ++ulPort;
-
-              NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
-              UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
-              clientApps.Add (ulClientHelper.Install (ue));
-              PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
-                                                   InetSocketAddress (Ipv4Address::GetAny (), ulPort));
-              serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
-
-              EpcTft::PacketFilter ulpf;
-              ulpf.remotePortStart = ulPort;
-              ulpf.remotePortEnd = ulPort;
-              tft->Add (ulpf);
-            }
-
+          EpcTft::PacketFilter dlpf;
+          dlpf.localPortStart = dlPort;
+          dlpf.localPortEnd = dlPort;
+          tft->Add (dlpf);
+          EpcTft::PacketFilter ulpf;
+          ulpf.remotePortStart = ulPort;
+          ulpf.remotePortEnd = ulPort;
+          tft->Add (ulpf);
           EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
           lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
 
-          Time startTime = Seconds (startTimeSeconds->GetValue ());
-          serverApps.Start (startTime);
-          clientApps.Start (startTime);
-
+          dlServerApps.Start (Seconds (0.27));
+          dlClientApps.Start (Seconds (0.27));
+          ulServerApps.Start (Seconds (0.27));
+          ulClientApps.Start (Seconds (0.27));
         } // end for b
     }
 
@@ -351,20 +390,20 @@ main (int argc, char *argv[])
   lteHelper->AddX2Interface (enbNodes);
 
   // X2-based Handover
-  lteHelper->HandoverRequest (MilliSeconds (300), ueLteDevs.Get (0), enbLteDevs.Get (0), enbLteDevs.Get (1));
+  //lteHelper->HandoverRequest (Seconds (0.100), ueLteDevs.Get (0), enbLteDevs.Get (0), enbLteDevs.Get (1));
 
   // Uncomment to enable PCAP tracing
-  //p2ph.EnablePcapAll("lena-x2-handover");
+  // p2ph.EnablePcapAll("lena-x2-handover-measures");
 
   lteHelper->EnablePhyTraces ();
-  lteHelper->EnableMacTraces ();
+  //lteHelper->EnableMacTraces ();
   lteHelper->EnableRlcTraces ();
   lteHelper->EnablePdcpTraces ();
+  //lteHelper->DoCalculateUes (enbLteDevs, numberOfEnbs);
   Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
-  rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (0.05)));
-  Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
-  pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (0.05)));
-
+  rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+  // Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
+  // pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 
   // connect custom trace sinks for RRC connection establishment and handover notification
   Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
@@ -389,4 +428,5 @@ main (int argc, char *argv[])
 
   Simulator::Destroy ();
   return 0;
+
 }

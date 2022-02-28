@@ -37,6 +37,7 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("LenaX2HandoverMeasures");
 
+
 void
 NotifyConnectionEstablishedUe (std::string context,
                                uint64_t imsi,
@@ -148,12 +149,12 @@ main (int argc, char *argv[])
   // LogComponentEnable ("A2A4RsrqHandoverAlgorithm", logLevel);
   // LogComponentEnable ("A3RsrpHandoverAlgorithm", logLevel);
 
-  uint16_t numberOfUes = 27;
+  uint16_t numberOfUes = 80;
   uint16_t numberOfEnbs = 9;
-  uint16_t numBearersPerUe = 10;
+  uint16_t numBearersPerUe = 1;
   bool disableDl = false;
   bool disableUl = false;
-  double distance = 200.0; // m
+  double distance = 100.0; // m
   // double yForUe = 500.0;   // m
   double speed = 20;       // m/s
   double simTime = 10000 + (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
@@ -167,7 +168,7 @@ main (int argc, char *argv[])
   // this scenario, but do this before processing command line
   // arguments, so that the user is allowed to override these settings
   Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (10)));
-  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000));
+  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
 
   // Command line arguments
@@ -265,34 +266,58 @@ main (int argc, char *argv[])
 
 
   // Install Mobility Model in eNB
-  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < numberOfEnbs; i++)
-    {
-      Vector enbPosition ((1+int(i%3))*distance, (1+int(i/3))*distance, 0);
-      enbPositionAlloc->Add (enbPosition);
-    }
   MobilityHelper enbMobility;
+  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                "MinX", DoubleValue (100.0),
+                                "MinY", DoubleValue (100.0),
+                                "DeltaX", DoubleValue (100.0),
+                                "DeltaY", DoubleValue (100.0),
+                                "GridWidth", UintegerValue (3),
+                                "LayoutType", StringValue ("RowFirst"));
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  enbMobility.SetPositionAllocator (enbPositionAlloc);
   enbMobility.Install (enbNodes);
 
-  // Install Mobility Model in eNB
-  Ptr<ListPositionAllocator> UePositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < numberOfUes; i++)
-    {
-      Vector UePosition ((1+int(i%9))*(distance), (1+int(i/9))*(distance), 0);
-      UePositionAlloc->Add (UePosition);
-    }
+  // Install Mobility Model in UE
   MobilityHelper ueMobility;
-  ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  Ptr<RandomRectanglePositionAllocator> allocator = CreateObject<RandomRectanglePositionAllocator> ();
+  Ptr<UniformRandomVariable> xPos = CreateObject<UniformRandomVariable> ();
+  xPos->SetAttribute ("Min", DoubleValue (0.0));
+  xPos->SetAttribute ("Max", DoubleValue (400.0));
+  allocator->SetX (xPos);
+  Ptr<UniformRandomVariable> yPos = CreateObject<UniformRandomVariable> ();
+  yPos->SetAttribute ("Min", DoubleValue (0.0));
+  yPos->SetAttribute ("Max", DoubleValue (350.0));
+  allocator->SetY (yPos);
+  allocator->AssignStreams (1);
+  ueMobility.SetPositionAllocator (allocator);
+  ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
+                             "Bounds", RectangleValue (Rectangle (0, 400, 0, 400)),
+                             "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=3]"),
+                             "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0.2]"));
+  ueMobility.Install (ueNodes);
 
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //                           "Mode", StringValue ("Time"),
   //                           "Time", StringValue ("1s"),
   //                           "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=5.0]"),
-  //                           "Bounds", StringValue ("0|200|0|200"));
-  ueMobility.SetPositionAllocator (UePositionAlloc);
-  ueMobility.Install (ueNodes);
+  //                           "Bounds", StringValue ("0|400|0|300"));
+  // ueMobility.Install (ueNodes);
+
+
+  // // Install Mobility Model in UE
+  // MobilityHelper ueMobility;
+  // ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+  //                                "MinX", DoubleValue (100.0),
+  //                                "MinY", DoubleValue (100.0),
+  //                                "DeltaX", DoubleValue (20.0),
+  //                                "DeltaY", DoubleValue (20.0),
+  //                                "GridWidth", UintegerValue (5),
+  //                                "LayoutType", StringValue ("RowFirst"));
+  // ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
+  //                            "Bounds", RectangleValue (Rectangle (-500, 500, -500, 500)),
+  //                            "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=2]"),
+  //                            "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0.2]"));
+  // ueMobility.Install (ueNodes);
 
   Ptr<SonServerGymEnv> son_server = CreateObject<SonServerGymEnv> ();
   Ptr<OpenGymInterface> openGymInterface = CreateObject<OpenGymInterface> (openGymPort);
@@ -309,17 +334,10 @@ main (int argc, char *argv[])
   Ipv4InterfaceContainer ueIpIfaces;
   ueIpIfaces = epcHelper->AssignUeIpv4Address (NetDeviceContainer (ueLteDevs));
 
-  // // Attach all UEs to the first eNodeB
-  // for (uint16_t i = 0; i < numberOfUes/3; i++)
-  //   {
-  //     lteHelper->Attach (ueLteDevs.Get (3*i), enbLteDevs.Get (0));
-  //     lteHelper->Attach (ueLteDevs.Get (3*i +1), enbLteDevs.Get (1));
-  //     lteHelper->Attach (ueLteDevs.Get (3*i +2), enbLteDevs.Get (2));
-  //   }
   // Attach all UEs to the first eNodeB
   for (uint16_t i = 0; i < numberOfUes; i++)
     {
-      lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      lteHelper->AttachToClosestEnb (ueLteDevs.Get(i), enbLteDevs);
     }
 
 
@@ -328,6 +346,19 @@ main (int argc, char *argv[])
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 10000;
   uint16_t ulPort = 20000;
+
+  DataRateValue dataRateValue = DataRate ("18.6Mbps");
+
+  uint64_t bitRate = dataRateValue.Get ().GetBitRate ();
+
+  // uint32_t packetSize = 1024; //bytes
+
+  NS_LOG_DEBUG ("bit rate " << bitRate);
+
+  // double interPacketInterval = static_cast<double> (packetSize * 8) / bitRate;
+
+  // Time udpInterval = Seconds (interPacketInterval);
+  Time udpInterval = Seconds (0.01);
 
   // randomize a bit start times to avoid simulation artifacts
   // (e.g., buffer overflows due to packet transmissions happening
@@ -355,6 +386,9 @@ main (int argc, char *argv[])
 
               NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
               UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
+              // dlClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+              // dlClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+              // dlClientHelper.SetAttribute ("MaxPackets", UintegerValue (100));
               clientApps.Add (dlClientHelper.Install (remoteHost));
               PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
                                                    InetSocketAddress (Ipv4Address::GetAny (), dlPort));
@@ -372,6 +406,9 @@ main (int argc, char *argv[])
 
               NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
               UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
+              // ulClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+              // ulClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+              // ulClientHelper.SetAttribute ("MaxPackets", UintegerValue (100));
               clientApps.Add (ulClientHelper.Install (ue));
               PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
                                                    InetSocketAddress (Ipv4Address::GetAny (), ulPort));
@@ -404,11 +441,12 @@ main (int argc, char *argv[])
   // p2ph.EnablePcapAll("lena-x2-handover-measures");
 
   lteHelper->EnablePhyTraces ();
-  lteHelper->EnableMacTraces ();
+  // lteHelper->EnableMacTraces ();
   lteHelper->EnableRlcTraces ();
   lteHelper->EnablePdcpTraces ();
   Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+  rlcStats->SetAttribute ("DlRlcOutputFilename", StringValue ("DlRlcStats_random.txt"));
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 
@@ -433,7 +471,7 @@ main (int argc, char *argv[])
   // GtkConfigStore config;
   // config.ConfigureAttributes ();
 
-  openGymInterface->NotifySimulationEnd();
+  // openGymInterface->NotifySimulationEnd();
   Simulator::Destroy ();
   return 0;
 

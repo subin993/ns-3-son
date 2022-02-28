@@ -23,7 +23,7 @@ def action_func(obs,prev_action,numOfenb):
     # #New Part
     for i in range(numOfenb):
         if off[i] >= -24 and off[i] <= 24:
-            if dlPrbUsage[i] > 40:
+            if dlPrbUsage[i] > 20:
                 if off[i] <= -6:
                     off[i] -= 2
                 elif off[i] <= 6:
@@ -36,9 +36,9 @@ def action_func(obs,prev_action,numOfenb):
                     step[i] = 0
                 if dlPrbUsage[i] == 100:
                     step[i] += 1
-            if dlPrbUsage[i] <= 40:
+            if dlPrbUsage[i] <= 20:
                 step[i] +=1
-                if step[i]==1:
+                if step[i]==4:
                     if off[i] <= -8:
                         off[i] += 2
                     elif off[i] < 6:

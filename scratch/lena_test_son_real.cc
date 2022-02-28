@@ -27,6 +27,10 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/config-store-module.h"
 #include "ns3/son_server.h"
+#include <iostream>
+#include <vector>
+#include <stdio.h>
+#include <iomanip>
 
 using namespace ns3;
 
@@ -273,52 +277,9 @@ main (int argc, char *argv[])
   for (uint16_t i = 7; i < numberOfUes; i++)
     {
       ueNodes.Get(i)->GetObject<MobilityModel> ()->SetPosition (Vector (distance, 2*distance, 0));
-      ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
+      // ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
+      ueNodes.Get (i)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (i*(distance/70), 0, 0));
     }
-  // ueNodes.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 0, 0));
-  // ueNodes.Get (0)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (1)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 0, 0));
-  // ueNodes.Get (1)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (2)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance-110, 0));
-  // ueNodes.Get (2)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (3)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance-90, 0));
-  // ueNodes.Get (3)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (4)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance-10, 0));
-  // ueNodes.Get (4)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (5)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance+10, 0));
-  // ueNodes.Get (5)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (6)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance+90, 0));
-  // ueNodes.Get (6)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (7)->GetObject<MobilityModel> ()->SetPosition (Vector (0, distance+110, 0));
-  // ueNodes.Get (7)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (8)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 2*distance-90, 0));
-  // ueNodes.Get (8)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (9)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 2*distance+90, 0));
-  // ueNodes.Get (9)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  
-
-  // // Install Mobility Model in eNB
-  // Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  // for (uint16_t i = 0; i < numberOfEnbs; i++)
-  //   {
-  //     Vector enbPosition (distance * (i + 1), distance, 0);
-  //     enbPositionAlloc->Add (enbPosition);
-  //   }
-  // MobilityHelper enbMobility;
-  // enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  // enbMobility.SetPositionAllocator (enbPositionAlloc);
-  // enbMobility.Install (enbNodes);
-
-  // // Install Mobility Model in UE
-  // MobilityHelper ueMobility;
-  // ueMobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
-  // ueMobility.Install (ueNodes);
-  // ueNodes.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  // ueNodes.Get (1)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  // ueNodes.Get (2)->GetObject<MobilityModel> ()->SetPosition (Vector (0, yForUe, 0));
-  // ueNodes.Get (0)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (0, 0, 0));
-  // ueNodes.Get (1)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed-5, 0, 0));
-  // ueNodes.Get (2)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed/2, 0, 0));
 
   Ptr<SonServerGymEnv> son_server = CreateObject<SonServerGymEnv> ();
   Ptr<OpenGymInterface> openGymInterface = CreateObject<OpenGymInterface> (openGymPort);
@@ -340,15 +301,30 @@ main (int argc, char *argv[])
   // Attach all UEs to the first eNodeB
   for (uint16_t i = 0; i < numberOfUes; i++)
     {
-      lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      // lteHelper->Attach (ueLteDevs.Get (i), enbLteDevs.Get (0));
+      lteHelper->AttachToClosestEnb (ueLteDevs.Get (i), enbLteDevs);
+      // lteHelper->Attach (ueLteDevs.Get (i));
     }
 
 
   NS_LOG_LOGIC ("setting up applications");
 
-  // Install and start applications on UEs and remote host
+  // NS_LOG_INFO ("Install and start applications on UEs and remote host");
   uint16_t dlPort = 10000;
   uint16_t ulPort = 20000;
+
+  DataRateValue dataRateValue = DataRate ("18.6Mbps");
+
+  uint64_t bitRate = dataRateValue.Get ().GetBitRate ();
+
+  // uint32_t packetSize = 1024; //bytes
+
+  NS_LOG_DEBUG ("bit rate " << bitRate);
+
+  // double interPacketInterval = static_cast<double> (packetSize * 8) / bitRate;
+
+  // Time udpInterval = Seconds (interPacketInterval);
+  Time udpInterval = Seconds (0.01);
 
   // randomize a bit start times to avoid simulation artifacts
   // (e.g., buffer overflows due to packet transmissions happening
@@ -376,6 +352,9 @@ main (int argc, char *argv[])
 
               NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
               UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
+              // dlClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+              // dlClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+              // dlClientHelper.SetAttribute ("MaxPackets", UintegerValue (100));
               clientApps.Add (dlClientHelper.Install (remoteHost));
               PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
                                                    InetSocketAddress (Ipv4Address::GetAny (), dlPort));
@@ -393,6 +372,9 @@ main (int argc, char *argv[])
 
               NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
               UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
+              // ulClientHelper.SetAttribute ("Interval", TimeValue (udpInterval));
+              // ulClientHelper.SetAttribute ("PacketSize", UintegerValue (packetSize));
+              // ulClientHelper.SetAttribute ("MaxPackets", UintegerValue (100));
               clientApps.Add (ulClientHelper.Install (ue));
               PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
                                                    InetSocketAddress (Ipv4Address::GetAny (), ulPort));
@@ -431,6 +413,7 @@ main (int argc, char *argv[])
   //lteHelper->DoCalculateUes (enbLteDevs, numberOfEnbs);
   Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+  rlcStats->SetAttribute ("DlRlcOutputFilename", StringValue ("DlRlcStats_test.txt"));
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 

@@ -319,8 +319,8 @@ LteUePhy::GetTypeId (void)
                    "corresponds to 10% block error rate of a hypothetical PDCCH transmission"
                    "taking into account the PCFICH errors with transmission parameters."
                    "see 3GPP TS 36.213 4.2.1 and TS 36.133 7.6",
-                  //  DoubleValue (-5000000),
-                   DoubleValue (-5),
+                   DoubleValue (-5000000),
+                  //  DoubleValue (-5),
                    MakeDoubleAccessor (&LteUePhy::m_qOut),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Qin",
@@ -1572,14 +1572,20 @@ LteUePhy::InitializeRlfParams ()
 }
 
 int RlfCounter = 0;
+int RlfDetection_count = 0;
 void
 LteUePhy::RlfDetection (double sinrDb)
 {
+  RlfDetection_count += 1;
   NS_LOG_FUNCTION (this << sinrDb);
   m_sinrDbFrame += sinrDb;
   m_numOfSubframes++;
   NS_LOG_LOGIC ("No of Subframes: " << m_numOfSubframes << " UE synchronized: " << m_downlinkInSync);
-  // std::cout << "******************************************RLF Detection Function " << sinrDb << std::endl;
+  if (RlfDetection_count == 1601) 
+  {
+    std::cout << Simulator::Now ().GetSeconds () << " " << "**********imsi : " << m_imsi << " **********sinrDb : " << sinrDb << std::endl;
+    RlfDetection_count = 0;
+  }
   if (sinrDb < -5) {
     RlfCounter = RlfCounter + 1;
     // std::cout << "RlfCounter : " << RlfCounter << "***********************" << std::endl;

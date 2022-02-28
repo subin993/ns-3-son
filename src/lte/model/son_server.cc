@@ -15,7 +15,7 @@ namespace ns3{
 
     SonServerGymEnv::SonServerGymEnv (){
         NS_LOG_FUNCTION(this);
-        m_interval = Seconds(5);
+        m_interval = Seconds(10);
 
         Simulator::Schedule (Seconds(1), &SonServerGymEnv::ScheduleNextStateRead, this);
     }
