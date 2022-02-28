@@ -446,7 +446,13 @@ main (int argc, char *argv[])
   lteHelper->EnablePdcpTraces ();
   Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
-  rlcStats->SetAttribute ("DlRlcOutputFilename", StringValue ("DlRlcStats_random.txt"));
+
+  // Non-algorithm case -> Go to "test.py and configure"
+  rlcStats->SetAttribute ("DlRlcOutputFilename", StringValue ("DlRlcStats_random_non_alg.txt"));
+  
+  // // MLB Algorithm case -> Go to "test.py and configure"
+  // rlcStats->SetAttribute ("DlRlcOutputFilename", StringValue ("DlRlcStats_random_alg.txt"));
+
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 

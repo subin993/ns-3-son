@@ -19,62 +19,62 @@ def action_func(obs,prev_action,numOfenb):
     off = prev_action['Offset']
     step = prev_action['Step']
 
-    # # Using MLB Algorithm
-    # #New Part
-    for i in range(numOfenb):
-        if off[i] >= -24 and off[i] <= 24:
-            if dlPrbUsage[i] > 20:
-                if off[i] <= -6:
-                    off[i] -= 2
-                elif off[i] <= 6:
-                    off[i] -= 1
-                elif off[i] == -24:
-                    off[i] -= 0
-                else:
-                    off[i] -= 2
-                if step[i] ==1:
-                    step[i] = 0
-                if dlPrbUsage[i] == 100:
-                    step[i] += 1
-            if dlPrbUsage[i] <= 20:
-                step[i] +=1
-                if step[i]==4:
-                    if off[i] <= -8:
-                        off[i] += 2
-                    elif off[i] < 6:
-                        off[i] +=1
-                    elif off[i] == 24:
-                        off[i] += 0
-                    else:
-                        off[i] +=2
-                    step[i]=0
-
-    # # Non-using MLB Algorithm
-    # #New Part
+    # # # Using MLB Algorithm
+    # # #New Part
     # for i in range(numOfenb):
-    #     if off[i] > -6 and off[i] < 6:
-    #         if dlPrbUsage[i] > 40:
+    #     if off[i] >= -24 and off[i] <= 24:
+    #         if dlPrbUsage[i] > 20:
     #             if off[i] <= -6:
-    #                 off[i] -= 0
+    #                 off[i] -= 2
     #             elif off[i] <= 6:
+    #                 off[i] -= 1
+    #             elif off[i] == -24:
     #                 off[i] -= 0
     #             else:
-    #                 off[i] -= 0
+    #                 off[i] -= 2
     #             if step[i] ==1:
     #                 step[i] = 0
     #             if dlPrbUsage[i] == 100:
-    #                 off[i] -= 1
     #                 step[i] += 1
-    #         if dlPrbUsage[i] <= 40:
+    #         if dlPrbUsage[i] <= 20:
     #             step[i] +=1
-    #             if step[i]==2:
+    #             if step[i]==4:
     #                 if off[i] <= -8:
-    #                     off[i] += 0
+    #                     off[i] += 2
     #                 elif off[i] < 6:
-    #                     off[i] +=0
+    #                     off[i] +=1
+    #                 elif off[i] == 24:
+    #                     off[i] += 0
     #                 else:
-    #                     off[i] +=0
+    #                     off[i] +=2
     #                 step[i]=0
+
+    # Non-using MLB Algorithm
+    #New Part
+    for i in range(numOfenb):
+        if off[i] > -6 and off[i] < 6:
+            if dlPrbUsage[i] > 40:
+                if off[i] <= -6:
+                    off[i] -= 0
+                elif off[i] <= 6:
+                    off[i] -= 0
+                else:
+                    off[i] -= 0
+                if step[i] ==1:
+                    step[i] = 0
+                if dlPrbUsage[i] == 100:
+                    off[i] -= 1
+                    step[i] += 1
+            if dlPrbUsage[i] <= 40:
+                step[i] +=1
+                if step[i]==2:
+                    if off[i] <= -8:
+                        off[i] += 0
+                    elif off[i] < 6:
+                        off[i] +=0
+                    else:
+                        off[i] +=0
+                    step[i]=0
 
     action['Offset'] = off
     action['Step'] = step
