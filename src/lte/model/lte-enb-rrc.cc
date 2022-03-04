@@ -1805,6 +1805,7 @@ LteEnbRrc::GetTypeId (void)
                    "The SRS periodicity in milliseconds",
                   //  UintegerValue (40),
                    UintegerValue (80),
+                  //  UintegerValue (160),
                    MakeUintegerAccessor (&LteEnbRrc::SetSrsPeriodicity, 
                                          &LteEnbRrc::GetSrsPeriodicity),
                    MakeUintegerChecker<uint32_t> ())
